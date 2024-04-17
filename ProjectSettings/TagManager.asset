@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Start Point
   - End Point
+  - Cover
   layers:
   - Default
   - TransparentFX

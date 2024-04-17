@@ -1,0 +1,150 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+using System.Linq;
+
+public class AI : MonoBehaviour
+{
+    //Waypoints
+    [SerializeField] private List<GameObject> _wayPoints = new List<GameObject>();
+    private GameObject _startPoint;
+    private GameObject _endPoint;
+    [SerializeField] private GameObject[] _totalCovers;
+    /*[SerializeField] private List<GameObject> _selectedCovers = new List<GameObject>();*/
+    /*[SerializeField] private Transform _selectedCover;*/
+    private List<int> _coverIndexes = new List<int>();
+
+    private NavMeshAgent _agent; 
+    [SerializeField] private Animator _anim;  
+    
+    public float radius = 7f;
+    private bool _isHiding = false;   
+
+    //AI
+    private enum AIState
+    {
+        Run,
+        Hide,
+        Die
+    }
+    [SerializeField] private AIState _currentState;
+
+    private void Awake()
+    { 
+        _startPoint = GameObject.FindGameObjectWithTag("Start Point");
+        _endPoint = GameObject.FindGameObjectWithTag("End Point");
+        GenerateWaypointList();
+
+        //populate and sort cover list
+        /*_selectedCovers.Clear();
+        _totalCovers = GameObject.FindGameObjectsWithTag("Cover");*/
+        /*Utilities.SelectThreeRandomIntegers(_coverIndexes, 0, _totalCovers.Length);
+        _coverIndexes.Sort();   */
+        /* for(var i  = 0; i < _coverIndexes.Count; i++)
+         {
+             GameObject selectedCover = _totalCovers[_coverIndexes[i]];
+             _selectedCovers.Add(selectedCover);
+         }*/
+    }
+
+    private void Start()
+    {
+        _agent = GetComponent<NavMeshAgent>();
+        if (_agent == null)
+        {
+            Debug.LogError("Nav Mesh Agent is null");
+        }
+    }
+
+
+    private void Update()
+    {
+        /*CheckSurroundings();*/
+       /* if (_selectedCover != null)
+        {
+            _currentState = AIState.Hide;
+        }*/
+        switch (_currentState)
+        {
+            case AIState.Run:
+                /*MoveForward();*/
+                break;
+            case AIState.Hide:
+                /*if (!_isHiding)
+                {
+                    StartCoroutine(HideRoutine());
+                    _isHiding = true;
+                }*/
+                /*Hide();*/
+                break;
+            case AIState.Die:
+                Debug.Log("Dying...");
+                break;
+        }
+    }
+
+    void MoveForward()
+    {
+        _agent.SetDestination(_endPoint.transform.position);
+    }
+
+    /*void CheckSurroundings()
+    {
+        Collider[] colliders = Physics.OverlapSphere(transform.position, radius);
+        if (colliders.Length > 0 && colliders[0].CompareTag("Cover") && _selectedCovers.Contains(colliders[0].gameObject))
+        {
+            _selectedCover = colliders[0].gameObject;
+        }
+    }*/
+
+    /*void Hide()
+    {
+        _agent.SetDestination(_selectedCover.transform.position);
+        float distance = Vector3.Distance(transform.position, _selectedCover.transform.position);
+        if (distance < 0.8f)
+        {
+            Debug.Log("Less than 0.8f");
+            _agent.isStopped = true;
+            _anim.SetBool("isHiding", true);
+            Vector3 directionToCollider = _selectedCover.transform.position - transform.position;
+            directionToCollider.y = 0f; // Keep the agent standing straight
+            Quaternion oppositeRotation = Quaternion.LookRotation(-directionToCollider); // Calculate the rotation to face away from the collider
+            _agent.transform.rotation = oppositeRotation;
+        }else
+        {
+            Debug.Log(distance);
+        }
+    }*/
+
+    /*IEnumerator HideRoutine()
+    {
+        Hide();
+        yield return new WaitForSeconds(4f);
+        _selectedCovers.Remove(_selectedCover);
+        _selectedCover = null;
+        _isHiding = false;
+        _currentState = AIState.Run;
+        _agent.isStopped = false;
+        _anim.SetBool("isHiding", false);
+    }*/
+
+    void GenerateWaypointList()
+    {
+        _wayPoints.Add(_startPoint);
+        //get all the covers
+        _totalCovers = GameObject.FindGameObjectsWithTag("Cover");
+        //select 3 random covers -> sort them in ascending order
+        Utilities.SelectThreeRandomIntegers(_coverIndexes, 0, _totalCovers.Length);
+        _coverIndexes.Sort();
+        //add covers to waypoint list if their indexes were selected
+        for (var i = 0; i < _totalCovers.Length; i++)
+        {
+            if (_coverIndexes.Contains(i))
+            {
+                _wayPoints.Add(_totalCovers[i]);
+            }
+        }
+        _wayPoints.Add(_endPoint);
+    }
+}

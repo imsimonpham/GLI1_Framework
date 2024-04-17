@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class SpawnManager : MonoSingleton<SpawnManager>
 {
@@ -8,13 +9,13 @@ public class SpawnManager : MonoSingleton<SpawnManager>
     [SerializeField] private List<GameObject> _enemyPool = new List<GameObject>();
     [SerializeField] private GameObject _enemyContainer;
     [SerializeField] private Transform _startPoint;
-    private int _enemyPoolSize = 20;
-    [SerializeField] private int _enemySpawned = 0;
+    private int _enemyPoolSize = 1;
+    [SerializeField] private int _enemySpawned;
 
     private void Start()
     {
-        _enemyPool = SpawnEnemies(_enemyPoolSize);
-        StartCoroutine(SpawnRoutine());
+        _enemyPool = GenerateEnemyPool(_enemyPoolSize);
+        /*StartCoroutine(SpawnRoutine());*/
     }
 
     IEnumerator SpawnRoutine()
@@ -26,22 +27,32 @@ public class SpawnManager : MonoSingleton<SpawnManager>
         }
     }
 
+    private void Update()
+    {
+        if (Keyboard.current.qKey.wasPressedThisFrame)
+        {
+            RequestEnemySpawn();
+        }
+    }
+
     GameObject RequestEnemySpawn()
     {
         foreach(var enemy in _enemyPool)
         {
             if(enemy.activeInHierarchy == false)
             {
+                enemy.transform.position = _startPoint.position;
                 enemy.SetActive(true);
+                enemy.GetComponent<AI>().SetupAI();
                 _enemySpawned++;
                 return enemy;
             }
         }
-        //TODO: Dynamically spawn new enemies 
-        return null;
+        //create new enemies when needed
+        return GenerateEnemyAsNeeded();
     }
 
-    List<GameObject> SpawnEnemies(int enemyCount)
+    List<GameObject> GenerateEnemyPool(int enemyCount)
     {
         for(var i = 0; i < enemyCount; i++)
         {
@@ -51,5 +62,15 @@ public class SpawnManager : MonoSingleton<SpawnManager>
             _enemyPool.Add(enemyGO);    
         }
         return _enemyPool;
+    }
+
+    GameObject GenerateEnemyAsNeeded()
+    {
+        GameObject newEnemy = Instantiate(_enemyPrefab, _startPoint.position, Quaternion.Euler(0, -90, 0));
+        newEnemy.transform.parent = _enemyContainer.transform;
+        _enemyPool.Add(newEnemy);
+        newEnemy.GetComponent<AI>().SetupAI();
+        _enemySpawned++;
+        return newEnemy;
     }
 }

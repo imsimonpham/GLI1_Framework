@@ -14,7 +14,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400132, guid: 7e934d1bda7534fdfad8fec39f097003, type: 3}
       propertyPath: m_RootOrder
-      value: 8
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 400132, guid: 7e934d1bda7534fdfad8fec39f097003, type: 3}
       propertyPath: m_LocalScale.x
@@ -76,6 +76,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 12fe8a9638b3a4c4cbfadf0531d007e2, type: 2}
+    - target: {fileID: 9500000, guid: 7e934d1bda7534fdfad8fec39f097003, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -87,6 +91,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1076770074989785281}
   m_SourcePrefab: {fileID: 100100000, guid: 7e934d1bda7534fdfad8fec39f097003, type: 3}
+--- !u!95 &4505462472721128310 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 9500000, guid: 7e934d1bda7534fdfad8fec39f097003, type: 3}
+  m_PrefabInstance: {fileID: 4505462472730586646}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4505462472730487090 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100132, guid: 7e934d1bda7534fdfad8fec39f097003, type: 3}
@@ -104,6 +113,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b393b8120b9191e4497a842230dc4844, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _wayPoints: []
+  _currentWaypointIndex: 0
+  _totalCovers: []
+  _anim: {fileID: 4505462472721128310}
+  _currentState: 0
+  _health: 200
 --- !u!195 &1076770074989785281
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -113,7 +128,7 @@ NavMeshAgent:
   m_GameObject: {fileID: 4505462472730487090}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.5
+  m_Radius: 0.4
   m_Speed: 4
   m_Acceleration: 8
   avoidancePriority: 50
