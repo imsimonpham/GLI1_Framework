@@ -2,9 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
-using System.Linq;
-using Unity.VisualScripting;
-using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class AI : MonoBehaviour
 {
@@ -31,7 +28,7 @@ public class AI : MonoBehaviour
     private NavMeshAgent _agent;
     private bool _isHiding = false;
     private bool _isDead = false;
-    [SerializeField] private float _health;
+    [SerializeField] private int _health;
     private int _score = 50;
     private int _fullHealth = 200;
 
@@ -95,6 +92,7 @@ public class AI : MonoBehaviour
 
     void MoveForward()
     {
+        if(transform.name == "Test") { return; }
        _agent.SetDestination(_wayPoints[_currentWaypointIndex].transform.position);
        float distanceToCurrentWaypoint = Vector3.Distance(_wayPoints[_currentWaypointIndex].transform.position, _agent.transform.position);
        if (distanceToCurrentWaypoint < 1f && _currentWaypointIndex < _wayPoints.Count - 1)
@@ -165,5 +163,14 @@ public class AI : MonoBehaviour
         _health = _fullHealth;
         _currentState = AIState.Run;
         gameObject.SetActive(false);
+    }
+
+    public void TakeDamage(int dmgAmount)
+    {
+        _health -= dmgAmount;
+        if(_health < 0 )
+        {
+            _currentState = AIState.Die;
+        }
     }
 }

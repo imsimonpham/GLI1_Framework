@@ -174,6 +174,11 @@ namespace GameDevHQ.FileBase.Plugins.FPS_Character_Controller
                 _fpsCamera.transform.localPosition = resetHead; //assign the head position back to the initial cam pos
             }
         }
+
+        public void AdjustLookSensitity(float amount)
+        {
+            _lookSensitivity = amount;
+        }
     }
 }
 
