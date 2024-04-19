@@ -1,36 +1,113 @@
+using System.Collections;
 using UnityEngine;
 
 public class Weapon : MonoBehaviour
 {
+    [Header("Weapon Stats")]
     [SerializeField] LayerMask _layerMask;
-    [SerializeField] int _damage;
+    [SerializeField] int _unscopedDamage = 35;
+    [SerializeField] int _fullyScopedDamage = 100;
     [SerializeField] private float _fireRate;
     private float _nextFireTime = -1f;
     private int _shotsFired;
+    private float _fullChargePercentage = 100f;
+    private float _chargeDuration = 1f;
+    private float _startChargePercentage = 0f;
+    private float _currentChargePercentage;
+    private bool _isCharging;
+    private bool _isCurrentlyScoping;
+    private int _damageDealt;
+    private bool _canCharge = true;
+
+    [Header("UI")]
+    [SerializeField] private GameObject _headShotInd;
+    [SerializeField] private GameObject _bodyShotInd;
+    private bool _shownHeadShotInd = false;
+    private bool _shownBodyShotInd = false;
+    private float _timeBetweenHitIndications = 0.1f;
+
+    [Header("VFX")]
+    [SerializeField] private GameObject _muzzleFlashPrefab;
+    [SerializeField] private GameObject _firePoint;
+    [SerializeField] private GameObject _gargabeContainer;
+    [SerializeField] private GameObject _scopedShotTrailPrefab;
+
+    //Recoil
+    private CameraRecoil _camRecoil;
+
+    private void Start()
+    {
+        _camRecoil = GameObject.FindAnyObjectByType<CameraRecoil>().GetComponent<CameraRecoil>();
+        if(_camRecoil == null )
+        {
+            Debug.Log("Camera Recoil is null");
+        }
+    }
+
+    void Update()
+    {
+        if (_isCurrentlyScoping)
+        {     
+            _fireRate = 0.5f;
+
+        }else
+        {
+            _fireRate = 0.2f;
+        }
+        UIManager.Instance.UpdateWeaponChargePercentageText(_currentChargePercentage);
+    }
 
     public void Fire()
     {
         if (Time.time > _nextFireTime)
         {
+            //TO BE DELETED/REPLACED
             _shotsFired++;
             UIManager.Instance.UpdateShoftsFiredText(_shotsFired);
+            //TO BE DELETED/REPLACED
 
+           
             Ray rayOrigin = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             RaycastHit hitInfo;
+
+            if (!_isCurrentlyScoping)
+            {
+                ShowUnscopedShotMuzzleFlash();
+                _camRecoil.RecoilFire();
+            } else
+            {
+                ShowScopedShotTrail();
+                _camRecoil.RecoilFire();
+            }
+
             if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, _layerMask))
             {
                 Hitbox hitbox = hitInfo.collider.GetComponent<Hitbox>();
                 if (hitbox != null)
                 {
-                    UIManager.Instance.UpdateHitBoxText(hitbox.GetDamageType().ToString());
+                    int damage;
                     Hitbox.CollisionType type = hitbox.GetDamageType();
                     switch (type)
                     {
                         case Hitbox.CollisionType.Head:
-                            hitbox.Hit(_damage * 2);
+                            if (!_shownHeadShotInd)
+                            {
+                                StartCoroutine(HitIndicatingRoutine(_headShotInd));
+                                _shownHeadShotInd = true;
+                            }
+                            damage = CalculateHitDamage() * 2;
+                            hitbox.Hit(damage);
+                            _shownHeadShotInd = false;
                             break;
                         case Hitbox.CollisionType.Body:
-                            hitbox.Hit(_damage);
+                            if (!_shownBodyShotInd)
+                            {
+                                StartCoroutine(HitIndicatingRoutine(_bodyShotInd));
+                                _shownBodyShotInd = false;
+                            }
+                            damage = CalculateHitDamage();
+                            hitbox.Hit(damage);
+                            _shownBodyShotInd = false;
                             break;
                     }
                 }
@@ -40,6 +117,96 @@ public class Weapon : MonoBehaviour
                 }
             }
             _nextFireTime = Time.time + _fireRate;
+        }
+    }
+
+    IEnumerator HitIndicatingRoutine(GameObject indicator)
+    {
+        indicator.SetActive(true);
+        yield return new WaitForSeconds(_timeBetweenHitIndications);
+        indicator.SetActive(false);
+    }
+
+    public IEnumerator WeaponChargeRoutine()
+    {
+        _isCharging = true; // Set charging flag to true
+        float timer = 0f;
+
+        while (timer < _chargeDuration && _isCharging) // Check if still charging
+        {
+            _isCurrentlyScoping = true;
+            //Address weapon recoverry
+            if (!_canCharge)
+            {
+                _currentChargePercentage = 0;
+                break;
+            } else
+            {
+                float progress = timer / _chargeDuration;
+                _currentChargePercentage = Mathf.Lerp(_startChargePercentage, _fullChargePercentage, progress); // Start from 0%
+                if (_currentChargePercentage >= 98.5f) // Check if charge is close to 100%
+                {
+                    _currentChargePercentage = _fullChargePercentage; // Round up to 100% if close
+                }
+                timer += Time.deltaTime;
+            }         
+            yield return null;
+        }
+    }
+
+    public void StopWeaponCharge()
+    {
+        //stop weapon from charging and reset weapon for the next charge 
+        _isCurrentlyScoping = false;
+        _isCharging = false;
+        _currentChargePercentage = 0;
+        _canCharge = true;
+    }
+
+    int CalculateHitDamage()
+    {
+        if (_isCurrentlyScoping)
+        {
+            _damageDealt = Mathf.RoundToInt(_fullyScopedDamage * _currentChargePercentage / 100f);
+        }
+        else
+        {
+            _damageDealt = _unscopedDamage;
+        }
+
+        return _damageDealt;
+    }
+
+    public void DiableWeapon()
+    {
+        _currentChargePercentage = 0;
+        _canCharge = false;     
+    }
+
+    public void EnableWeapon()
+    {
+        _canCharge = true;
+    }
+
+    void ShowUnscopedShotMuzzleFlash()
+    {
+       GameObject muzzleFlash = Instantiate(_muzzleFlashPrefab, _firePoint.transform.position, _firePoint.transform.rotation, _gargabeContainer.transform);
+       Destroy(muzzleFlash, 0.1f );
+    }
+
+    void ShowScopedShotTrail()
+    {
+        Vector3 shotDirection = _firePoint.transform.forward; // Get the direction the weapon is facing
+
+        // Instantiate the trail effect
+        GameObject trailInstance = Instantiate(_scopedShotTrailPrefab, _firePoint.transform.position, _firePoint.transform.rotation, _gargabeContainer.transform);
+        TrailEffect trailEffect = trailInstance.GetComponent<TrailEffect>();
+
+        if (trailEffect != null)
+        {
+            // Set the direction and speed of the trail effect
+            trailEffect.SetTrailDirection(shotDirection);
+            trailEffect.SetTrailSpeed(10f); // Adjust speed as needed
         }
     }
 }

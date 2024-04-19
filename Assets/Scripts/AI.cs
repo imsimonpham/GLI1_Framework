@@ -2,38 +2,47 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
 
 public class AI : MonoBehaviour
 {
-    //Waypoints
-    [SerializeField] private List<GameObject> _wayPoints = new List<GameObject>();
-    [SerializeField] private int _currentWaypointIndex;
+    private List<GameObject> _wayPoints = new List<GameObject>();
+    private int _currentWaypointIndex;
     private GameObject _endPoint;
-    [SerializeField] private GameObject[] _totalCovers;
+    private GameObject[] _totalCovers;
     private List<int> _coverIndexes = new List<int>();
-
     private List<List<int>> _coverMasterList = new List<List<int>>();
 
-    //Animations
-    [SerializeField] private Animator _anim;      
+    [Header("Animation")]
+    [SerializeField] private Animator _anim;
 
-    //AI
+    [Header("AI ")]
+    [SerializeField] private int _health;
     private enum AIState
     {
         Run,
         Hide,
         Die
     }
-    [SerializeField] private AIState _currentState;  
+    [SerializeField] private AIState _currentState;
+    
     private NavMeshAgent _agent;
     private bool _isHiding = false;
     private bool _isDead = false;
-    [SerializeField] private int _health;
+    
     private int _score = 50;
     private int _fullHealth = 200;
 
     //Player
     private Player _player;
+
+    [Header("UI")]
+    [SerializeField] private GameObject _damageTextPrefab;
+    [SerializeField] private GameObject _healthBarContainer;
+    [SerializeField] private Image _healthBar;
+    private float _timeBetweenKillIndications = 0.5f;
+    private GameObject _killInd;
+    private Camera _mainCam;
 
     private void Awake()
     { 
@@ -59,6 +68,13 @@ public class AI : MonoBehaviour
         {
             Debug.LogError("Player is null");
         }
+        _killInd = GameObject.FindGameObjectWithTag("Kill Indicator");
+        if (_killInd == null)
+        {
+            Debug.LogError("Kill Indicator is null");
+        }
+
+        _mainCam = Camera.main;
     }
 
 
@@ -88,6 +104,9 @@ public class AI : MonoBehaviour
                 }
                 break;
         }
+
+        //ensure health bar always looks at camera
+        _healthBarContainer.transform.rotation = Quaternion.LookRotation(_healthBarContainer.transform.position - _mainCam.transform.position);
     }
 
     void MoveForward()
@@ -147,6 +166,7 @@ public class AI : MonoBehaviour
         _coverIndexes.Clear();
         _wayPoints.Clear();
         _player.GainScore(_score);
+        _player.IncreaseEnemiesKilled();
         _isDead = true;
         Invoke("ResetAI", 2.5f);
     }
@@ -161,6 +181,7 @@ public class AI : MonoBehaviour
     {
         _isDead = false;
         _health = _fullHealth;
+        UpdateHealthBar();
         _currentState = AIState.Run;
         gameObject.SetActive(false);
     }
@@ -168,9 +189,32 @@ public class AI : MonoBehaviour
     public void TakeDamage(int dmgAmount)
     {
         _health -= dmgAmount;
-        if(_health < 0 )
+        UpdateHealthBar();
+        ShowDamageText(dmgAmount);
+        if(_health <= 0 )
         {
             _currentState = AIState.Die;
+            StartCoroutine(KillIndicatingRoutine());
         }
+    }
+
+    void ShowDamageText(int dmgAmount)
+    {
+        TextMesh text = Instantiate(_damageTextPrefab, transform.position, Quaternion.Euler(0, -180, 0), transform).GetComponent<TextMesh>();
+        if(text != null )
+        {
+            text.text = dmgAmount.ToString();
+        } 
+    }
+
+    IEnumerator KillIndicatingRoutine()
+    {
+        _killInd.GetComponent<Image>().enabled = true;
+        yield return new WaitForSeconds(_timeBetweenKillIndications);
+        _killInd.GetComponent<Image>().enabled = false;
+    }
+    void UpdateHealthBar()
+    {
+        _healthBar.fillAmount = (float) _health / _fullHealth;
     }
 }

@@ -9,6 +9,7 @@ TagManager:
   - Cover
   - Head
   - AI
+  - Kill Indicator
   layers:
   - Default
   - TransparentFX
