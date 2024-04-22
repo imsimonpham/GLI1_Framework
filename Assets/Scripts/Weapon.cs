@@ -5,10 +5,11 @@ public class Weapon : MonoBehaviour
 {
     [Header("Weapon Stats")]
     [SerializeField] LayerMask _layerMask;
+    private string _layerNameToCheck = "AI";
     [SerializeField] int _unscopedDamage = 35;
     [SerializeField] int _fullyScopedDamage = 100;
     [SerializeField] private float _fireRate;
-    private float _nextFireTime = -1f;
+    private float _nextFireTime;
     private int _shotsFired;
     private float _fullChargePercentage = 100f;
     private float _chargeDuration = 1f;
@@ -32,6 +33,12 @@ public class Weapon : MonoBehaviour
     [SerializeField] private GameObject _gargabeContainer;
     [SerializeField] private GameObject _scopedShotTrailPrefab;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip _unscopedShotSound;
+    [SerializeField] private AudioClip _scopedShotSound;
+    [SerializeField] private AudioSource _audioSource;
+    [SerializeField] private AudioClip _bulletHitBarrierSound;
+
     //Recoil
     private CameraRecoil _camRecoil;
 
@@ -48,7 +55,7 @@ public class Weapon : MonoBehaviour
     {
         if (_isCurrentlyScoping)
         {     
-            _fireRate = 0.5f;
+            _fireRate = 1f;
 
         }else
         {
@@ -74,17 +81,21 @@ public class Weapon : MonoBehaviour
             {
                 ShowUnscopedShotMuzzleFlash();
                 _camRecoil.RecoilFire();
+                PlayUnscopedShotSound();
             } else
             {
                 ShowScopedShotTrail();
                 _camRecoil.RecoilFire();
+                PlayScopedShotSound();
             }
 
-            if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, _layerMask))
+            if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << 6))
             {
+                //if layer mask == AI
                 Hitbox hitbox = hitInfo.collider.GetComponent<Hitbox>();
                 if (hitbox != null)
                 {
+                        
                     int damage;
                     Hitbox.CollisionType type = hitbox.GetDamageType();
                     switch (type)
@@ -110,11 +121,34 @@ public class Weapon : MonoBehaviour
                             _shownBodyShotInd = false;
                             break;
                     }
+
+                    AI enemy = hitbox.GetAIComponent();
+                    if (enemy == null)
+                    {
+                        Debug.LogError("AI Component is null");
+                        return;
+                    }
+                    if (!_isCurrentlyScoping)
+                    {
+                        enemy.SetKillType(AI.KillType.Unscope);
+                    }
+                    else
+                    {
+                        enemy.SetKillType(AI.KillType.Scope);
+                        enemy.AdjustDeathSound(_currentChargePercentage);
+                    }
                 }
-                else
+                else 
                 {
-                    Debug.Log("Hit box is null");
+                    Debug.LogError("Hit box is null");
                 }
+
+            }
+            else if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << 7))
+            {
+                //if layer mask == Barrier
+                _audioSource.PlayOneShot(_bulletHitBarrierSound, 1f);
+
             }
             _nextFireTime = Time.time + _fireRate;
         }
@@ -208,5 +242,28 @@ public class Weapon : MonoBehaviour
             trailEffect.SetTrailDirection(shotDirection);
             trailEffect.SetTrailSpeed(10f); // Adjust speed as needed
         }
+    }
+
+    void PlayScopedShotSound()
+    {
+        if(_currentChargePercentage <= 50f)
+        {
+            _audioSource.PlayOneShot(_scopedShotSound, 0.2f);
+            _audioSource.pitch = 2f;
+        } else if(_currentChargePercentage <= 80f)
+        {
+            _audioSource.PlayOneShot(_scopedShotSound, 0.3f);
+            _audioSource.pitch = 1.5f;
+        } else
+        {
+            _audioSource.PlayOneShot(_scopedShotSound, 0.4f);
+            _audioSource.pitch = 1f;
+        }
+    }
+
+    void PlayUnscopedShotSound()
+    {
+        _audioSource.PlayOneShot(_unscopedShotSound, 0.2f);
+        _audioSource.pitch = 2f;
     }
 }

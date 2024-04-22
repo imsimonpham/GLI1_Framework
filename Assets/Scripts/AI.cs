@@ -2,39 +2,58 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 public class AI : MonoBehaviour
 {
+    //AI States
     private List<GameObject> _wayPoints = new List<GameObject>();
     private int _currentWaypointIndex;
     private GameObject _endPoint;
     private GameObject[] _totalCovers;
     private List<int> _coverIndexes = new List<int>();
     private List<List<int>> _coverMasterList = new List<List<int>>();
+    float _distanceToEndPoint;
+    private bool _executedFinishedAITasks;
 
     [Header("Animation")]
     [SerializeField] private Animator _anim;
+    [SerializeField] private int _floor;
 
     [Header("AI ")]
     [SerializeField] private int _health;
     private enum AIState
     {
+        Idle,
         Run,
         Hide,
         Die
     }
     [SerializeField] private AIState _currentState;
-    
+
     private NavMeshAgent _agent;
     private bool _isHiding = false;
     private bool _isDead = false;
-    
+
     private int _score = 50;
     private int _fullHealth = 200;
 
     //Player
     private Player _player;
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip _unscopeKill;
+    [SerializeField] private AudioClip _scopeKill;
+    [SerializeField] private AudioClip _trackCompletion;
+    [SerializeField] private AudioSource _audioSource;
+
+    public enum KillType
+    {
+        Unscope,
+        Scope
+    }
+    [SerializeField] private KillType _killType;
 
     [Header("UI")]
     [SerializeField] private GameObject _damageTextPrefab;
@@ -45,14 +64,14 @@ public class AI : MonoBehaviour
     private Camera _mainCam;
 
     private void Awake()
-    { 
+    {
         _endPoint = GameObject.FindGameObjectWithTag("End Point");
-        _coverMasterList.Add(new List<int> { 0, 6, 11 }); 
-        _coverMasterList.Add(new List<int> { 1, 7, 13 }); 
-        _coverMasterList.Add(new List<int> { 2, 9, 15 }); 
-        _coverMasterList.Add(new List<int> { 3, 8, 12 }); 
-        _coverMasterList.Add(new List<int> { 4, 10, 14 });
-        _coverMasterList.Add(new List<int> { 3, 5, 13 });
+        _coverMasterList.Add(new List<int> { 1, 9, 14 });
+        _coverMasterList.Add(new List<int> { 5, 10, 15 });
+        _coverMasterList.Add(new List<int> { 2, 11, 14 });
+        _coverMasterList.Add(new List<int> { 4, 7, 12 });
+        _coverMasterList.Add(new List<int> { 0, 8, 11 });
+        _coverMasterList.Add(new List<int> { 3, 6, 13 });
     }
 
     private void Start()
@@ -64,7 +83,7 @@ public class AI : MonoBehaviour
         }
 
         _player = GameObject.FindGameObjectWithTag("Player").GetComponent<Player>();
-        if( _player == null)
+        if (_player == null)
         {
             Debug.LogError("Player is null");
         }
@@ -75,23 +94,38 @@ public class AI : MonoBehaviour
         }
 
         _mainCam = Camera.main;
+        _currentState = AIState.Run;
     }
 
 
     private void Update()
     {
-        if(_health <= 0)
+        if (_health <= 0)
         {
             _currentState = AIState.Die;
         }
 
+        _distanceToEndPoint = Vector3.Distance(_endPoint.transform.position, transform.position);
+
+        if (_distanceToEndPoint < 1f)
+        {
+            if (!_executedFinishedAITasks)
+            {
+                PlayFinishedAISound();
+                Invoke(methodName: "ReuseFinishedAI", 1f);
+                _executedFinishedAITasks = true;
+            }
+        }
+
         switch (_currentState)
         {
+            case AIState.Idle:
+                break;
             case AIState.Run:
                 MoveForward();
                 break;
             case AIState.Hide:
-               if (!_isHiding)
+                if (!_isHiding)
                 {
                     StartCoroutine(HideRoutine());
                     _isHiding = true;
@@ -106,19 +140,19 @@ public class AI : MonoBehaviour
         }
 
         //ensure health bar always looks at camera
-        _healthBarContainer.transform.rotation = Quaternion.LookRotation(_healthBarContainer.transform.position - _mainCam.transform.position);
+        _healthBarContainer.transform.rotation = Quaternion.LookRotation(_healthBarContainer.transform.position - _mainCam.transform.position);    
     }
 
     void MoveForward()
     {
-        if(transform.name == "Test") { return; }
-       _agent.SetDestination(_wayPoints[_currentWaypointIndex].transform.position);
-       float distanceToCurrentWaypoint = Vector3.Distance(_wayPoints[_currentWaypointIndex].transform.position, _agent.transform.position);
-       if (distanceToCurrentWaypoint < 1f && _currentWaypointIndex < _wayPoints.Count - 1)
-       {
-         _currentState = AIState.Hide;
-         _currentWaypointIndex++;
-       }
+        if (transform.name == "Test") { return; }
+        _agent.SetDestination(_wayPoints[_currentWaypointIndex].transform.position);
+        float distanceToCurrentWaypoint = Vector3.Distance(_wayPoints[_currentWaypointIndex].transform.position, _agent.transform.position);
+        if (distanceToCurrentWaypoint < 1f && _currentWaypointIndex < _wayPoints.Count - 1)
+        {
+            _currentState = AIState.Hide;
+            _currentWaypointIndex++;
+        }
     }
 
     void GenerateWaypointList()
@@ -146,16 +180,19 @@ public class AI : MonoBehaviour
     }
 
     void Stop()
-    {  
+    {
         _agent.isStopped = true;
         _anim.SetBool("isHiding", true);
+        AdjustAgentRadius(0);
+        AdjustRotation();
     }
 
     void Resume()
-    {  
+    {
         _agent.isStopped = false;
         _anim.SetBool("isHiding", false);
         _currentState = AIState.Run;
+        AdjustAgentRadius(0.5f);
         _isHiding = false;
     }
 
@@ -168,21 +205,35 @@ public class AI : MonoBehaviour
         _player.GainScore(_score);
         _player.IncreaseEnemiesKilled();
         _isDead = true;
-        Invoke("ResetAI", 2.5f);
+        AdjustAgentRadius(0);
+        PlayDeathSound();
+        Invoke(methodName: "ReuseDeadAI", 2.5f);
     }
 
     public void SetupAI()
     {
         GenerateWaypointList();
-        _currentWaypointIndex = 0;      
+        _currentWaypointIndex = 0;
+        _currentState = AIState.Run;
     }
 
-    void ResetAI()
+    void ReuseDeadAI()
     {
         _isDead = false;
         _health = _fullHealth;
         UpdateHealthBar();
-        _currentState = AIState.Run;
+        _currentState = AIState.Idle;
+        AdjustAgentRadius(0.5f);
+        gameObject.SetActive(false);
+    }
+
+    void ReuseFinishedAI()
+    {
+        _health = _fullHealth;
+        UpdateHealthBar();
+        _coverIndexes.Clear();
+        _wayPoints.Clear();
+        _currentState = AIState.Idle;
         gameObject.SetActive(false);
     }
 
@@ -191,7 +242,7 @@ public class AI : MonoBehaviour
         _health -= dmgAmount;
         UpdateHealthBar();
         ShowDamageText(dmgAmount);
-        if(_health <= 0 )
+        if (_health <= 0)
         {
             _currentState = AIState.Die;
             StartCoroutine(KillIndicatingRoutine());
@@ -201,10 +252,10 @@ public class AI : MonoBehaviour
     void ShowDamageText(int dmgAmount)
     {
         TextMesh text = Instantiate(_damageTextPrefab, transform.position, Quaternion.Euler(0, -180, 0), transform).GetComponent<TextMesh>();
-        if(text != null )
+        if (text != null)
         {
             text.text = dmgAmount.ToString();
-        } 
+        }
     }
 
     IEnumerator KillIndicatingRoutine()
@@ -215,6 +266,56 @@ public class AI : MonoBehaviour
     }
     void UpdateHealthBar()
     {
-        _healthBar.fillAmount = (float) _health / _fullHealth;
+        _healthBar.fillAmount = (float)_health / _fullHealth;
+    }
+
+    void AdjustRotation()
+    {
+        transform.rotation = Quaternion.Euler(transform.rotation.x, -180f, transform.rotation.z);
+    }
+
+    public void SetKillType(KillType killType)
+    {
+        _killType = killType;
+    }
+
+    void PlayDeathSound()
+    {
+        if(_killType == KillType.Scope)
+        {
+            _audioSource.PlayOneShot(_scopeKill);
+            UIManager.Instance.UpdateHitBoxText(_killType.ToString());
+        } else
+        {
+            _audioSource.PlayOneShot(_unscopeKill, 1f);
+            _audioSource.pitch = 1f;
+            UIManager.Instance.UpdateHitBoxText(_killType.ToString());
+        }
+    }
+    
+    public void AdjustDeathSound(float currentChargePercentage)
+    {
+        if(currentChargePercentage < 50f)
+        {
+            _audioSource.volume = 0.3f;
+        }else if (currentChargePercentage < 80f)
+        {
+            _audioSource.volume = 0.5f;
+        }
+        else
+        {
+            _audioSource.volume = 1f;
+        }
+    }
+
+    private void AdjustAgentRadius(float radius)
+    {
+        _agent.radius = radius;
+    }
+
+    void PlayFinishedAISound()
+    {
+        _audioSource.PlayOneShot(_trackCompletion, 1f);
+        Debug.Log("Played Finished AI Sound");
     }
 }

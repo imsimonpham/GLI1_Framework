@@ -13,11 +13,16 @@ public class Hitbox : MonoBehaviour
 
     public void Hit(int dmgAmount)
     {
-        _AI.TakeDamage(dmgAmount); 
+        _AI.TakeDamage(dmgAmount);   
     }
     
     public CollisionType GetDamageType()
     {
         return _damageType;
+    }
+
+    public AI GetAIComponent()
+    {
+        return _AI;
     }
 }
