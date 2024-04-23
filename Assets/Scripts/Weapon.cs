@@ -67,13 +67,7 @@ public class Weapon : MonoBehaviour
     public void Fire()
     {
         if (Time.time > _nextFireTime)
-        {
-            //TO BE DELETED/REPLACED
-            _shotsFired++;
-            UIManager.Instance.UpdateShoftsFiredText(_shotsFired);
-            //TO BE DELETED/REPLACED
-
-           
+        {           
             Ray rayOrigin = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             RaycastHit hitInfo;
 

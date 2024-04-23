@@ -1,20 +1,32 @@
 using UnityEngine;
 using TMPro;
+using System.Collections;
+using UnityEngine.InputSystem;
 
 public class UIManager : MonoSingleton<UIManager>
 {
     [SerializeField] TextMeshProUGUI _scoreText;
     [SerializeField] TextMeshProUGUI _enemiesKilledText;
-    [SerializeField] TextMeshProUGUI _hitBoxText; // TO BE REPLACED/DELETED
-    [SerializeField] TextMeshProUGUI _shotsFiredText; // TO BE REPLACED/DELETED
     [SerializeField] TextMeshProUGUI _timerText;
     [SerializeField] TextMeshProUGUI _weaponChargeText;
+    [SerializeField] TextMeshProUGUI _waveIndexText;
+    [SerializeField] TextMeshProUGUI _nextWaveText;
+    [SerializeField] TextMeshProUGUI _playerLifePointText;
+    [SerializeField] GameObject _pauseMenu;
+    [SerializeField] GameObject _WinLossMenu;
+    [SerializeField] TextMeshProUGUI _winText;
+    [SerializeField] TextMeshProUGUI _lossText;
 
-    private float _countdownTime = 180;
+    private float _countdownTime;
+
+    private void Start()
+    {
+        _countdownTime = 179f;
+    }
 
     private void Update()
     {
-        float t = _countdownTime - Time.time;
+        float t = Time.timeSinceLevelLoad;
 
         if (t <= 0)
         {
@@ -38,16 +50,6 @@ public class UIManager : MonoSingleton<UIManager>
         _enemiesKilledText.text = "Enemies Killed: " + amount;
     }
 
-    public void UpdateHitBoxText(string text)
-    {
-        _hitBoxText.text = "Hitbox: " + text;
-    }
-
-    public void UpdateShoftsFiredText(int amount)
-    {
-        _shotsFiredText.text = "Shots Fired: " + amount;
-    }
-
     void UpdateTimer(float amount)
     {
         _timerText.text = amount.ToString();
@@ -66,6 +68,53 @@ public class UIManager : MonoSingleton<UIManager>
         }else
         {
             _weaponChargeText.gameObject.SetActive(false);
+        }
+    }
+
+    public void UpdateWaveText(int waveIndex, int totalWaves)
+    {
+        _waveIndexText.text = waveIndex + " / " + totalWaves;
+    }
+
+    public void ShowNextWaveText(bool show)
+    {
+        if (show)
+        {
+            _nextWaveText.gameObject.SetActive(true);
+        }else
+        {
+            _nextWaveText.gameObject.SetActive(value: false);
+        }
+    }
+
+    public void UpdatePlayerLifePointText(int lifepoint)
+    {
+        _playerLifePointText.text = lifepoint.ToString();
+    }
+
+    public void TogglePauseMenu(bool show)
+    {
+        if (show)
+        {
+            _pauseMenu.gameObject.SetActive(true);
+        }else
+        {
+            _pauseMenu.gameObject.SetActive(false);
+        }
+    }
+
+    public void ToggleWinLossMenu(string conditionText)
+    {
+        _WinLossMenu.SetActive(true);
+        if (conditionText == "win")
+        {
+            _winText.gameObject.SetActive(true);
+            _lossText.gameObject.SetActive(false);
+        }
+        else if (conditionText == "loss")
+        {
+            _winText.gameObject.SetActive(false);
+            _lossText.gameObject.SetActive(true);
         }
     }
 }

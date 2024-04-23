@@ -13,6 +13,7 @@ public class Player : MonoBehaviour
     [Header("Player's Stats")]
     [SerializeField] private int _score;
     [SerializeField] private int _enemiesKilled;
+    [SerializeField] private int _lifePoint;
 
     [Header("UI")]
     [SerializeField] GameObject _scopeOverlay;
@@ -29,9 +30,16 @@ public class Player : MonoBehaviour
 
     private bool _isCharging = false;
     private bool _isScopingIn = false;
+    private bool _enabled = true;
+
+    private void Start()
+    {
+        UIManager.Instance.UpdatePlayerLifePointText(_lifePoint);
+    }
 
     private void Update()
     {
+        if (!_enabled) { return; }
         //Fire a shot
         if (Mouse.current.leftButton.wasPressedThisFrame) {
             _weapon.Fire();
@@ -70,10 +78,10 @@ public class Player : MonoBehaviour
             _isCharging = false;
         }
 
-        if(Keyboard.current.eKey.wasPressedThisFrame)
+        /*if(Keyboard.current.eKey.wasPressedThisFrame)
         {
             _scopedOutCursor.SetActive(!_scopedOutCursor.activeSelf);
-        }
+        }*/
     }
 
     public void GainScore(int amount)
@@ -93,10 +101,7 @@ public class Player : MonoBehaviour
         _isScopingIn = false;
         _scopeOverlay.SetActive(false);
         _weaponCamera.SetActive(true);
-        if (_scopedOutCursor.activeSelf)
-        {
-            _scopedOutCursor.SetActive(true);
-        }
+        _scopedOutCursor.SetActive(true);
         _mainCamera.fieldOfView = _scopedOutFOV;
         _FPSController.AdjustLookSensitity(2f);
     } 
@@ -115,5 +120,27 @@ public class Player : MonoBehaviour
     {
         _isCharging = false;
         _weapon.EnableWeapon();
+    }
+
+    public void ReduceLifePoint()
+    {
+        _lifePoint--;
+        UIManager.Instance.UpdatePlayerLifePointText(_lifePoint);
+    }
+
+    public int GetLifePoint()
+    {
+        return _lifePoint;
+    }
+
+    public void TogglePlayerEnablement(bool enable)
+    {
+        if(enable)
+        {
+            _enabled = true;
+        }else
+        {
+            _enabled = false;
+        }
     }
 }

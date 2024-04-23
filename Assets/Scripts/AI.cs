@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 public class AI : MonoBehaviour
@@ -31,6 +30,7 @@ public class AI : MonoBehaviour
         Die
     }
     [SerializeField] private AIState _currentState;
+    [SerializeField] private int _enemyWaveIndex;
 
     private NavMeshAgent _agent;
     private bool _isHiding = false;
@@ -112,6 +112,8 @@ public class AI : MonoBehaviour
             if (!_executedFinishedAITasks)
             {
                 PlayFinishedAISound();
+                SpawnManager.Instance.UpdateEnemiesAlive();
+                _player.ReduceLifePoint();
                 Invoke(methodName: "ReuseFinishedAI", 1f);
                 _executedFinishedAITasks = true;
             }
@@ -198,6 +200,8 @@ public class AI : MonoBehaviour
 
     void Die()
     {
+        SpawnManager.Instance.UpdateEnemyKilledCount(this);
+        SpawnManager.Instance.UpdateEnemiesAlive();
         _agent.isStopped = true;
         _anim.SetBool("isDead", true);
         _coverIndexes.Clear();
@@ -284,12 +288,10 @@ public class AI : MonoBehaviour
         if(_killType == KillType.Scope)
         {
             _audioSource.PlayOneShot(_scopeKill);
-            UIManager.Instance.UpdateHitBoxText(_killType.ToString());
         } else
         {
             _audioSource.PlayOneShot(_unscopeKill, 1f);
             _audioSource.pitch = 1f;
-            UIManager.Instance.UpdateHitBoxText(_killType.ToString());
         }
     }
     
@@ -316,6 +318,15 @@ public class AI : MonoBehaviour
     void PlayFinishedAISound()
     {
         _audioSource.PlayOneShot(_trackCompletion, 1f);
-        Debug.Log("Played Finished AI Sound");
+    }
+
+    public void SetEnemyWaveIndex(int index)
+    {
+        _enemyWaveIndex = index;
+    }
+
+    public int GetEnemyWaveIndex()
+    {
+        return _enemyWaveIndex;
     }
 }
