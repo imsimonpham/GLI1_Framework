@@ -19,6 +19,9 @@ public class Weapon : MonoBehaviour
     private bool _isCurrentlyScoping;
     private int _damageDealt;
     private bool _canCharge = true;
+    private int _AILayerMaskIndex = 6;
+    private int _barrierLayerMaskIndex = 7;
+    private int _barrelLayerMaskIndex = 9;
 
     [Header("UI")]
     [SerializeField] private GameObject _headShotInd;
@@ -32,6 +35,7 @@ public class Weapon : MonoBehaviour
     [SerializeField] private GameObject _firePoint;
     [SerializeField] private GameObject _gargabeContainer;
     [SerializeField] private GameObject _scopedShotTrailPrefab;
+    [SerializeField] private GameObject _explosionPrefab;
 
     [Header("Audio")]
     [SerializeField] private AudioClip _unscopedShotSound;
@@ -83,7 +87,7 @@ public class Weapon : MonoBehaviour
                 PlayScopedShotSound();
             }
 
-            if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << 6))
+            if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << _AILayerMaskIndex))
             {
                 //if layer mask == AI
                 Hitbox hitbox = hitInfo.collider.GetComponent<Hitbox>();
@@ -138,11 +142,20 @@ public class Weapon : MonoBehaviour
                 }
 
             }
-            else if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << 7))
+            else if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << _barrierLayerMaskIndex))
             {
                 //if layer mask == Barrier
                 _audioSource.PlayOneShot(_bulletHitBarrierSound, 1f);
 
+            } else if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << _barrelLayerMaskIndex))
+            {
+                // if layer mask == Barrels
+               Explosion explostion =  Instantiate(_explosionPrefab, hitInfo.collider.transform.position, Quaternion.identity).GetComponent<Explosion>();
+               if(explostion != null)
+               {
+                    explostion.ExplostionDamage();
+               }
+               Destroy(hitInfo.collider.gameObject, 0.5f); 
             }
             _nextFireTime = Time.time + _fireRate;
         }

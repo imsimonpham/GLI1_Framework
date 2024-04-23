@@ -13,5 +13,10 @@ public class DamageText : MonoBehaviour
        Vector3 randomPos = new Vector3(Random.Range(-_ramdomizeIntensity.x, _ramdomizeIntensity.x), Random.Range(-_ramdomizeIntensity.x, _ramdomizeIntensity.x), 0);
        transform.position += randomPos;
     }
+
+    public void SetParent(Transform parent)
+    {
+        gameObject.transform.parent = parent;
+    }
 }
 

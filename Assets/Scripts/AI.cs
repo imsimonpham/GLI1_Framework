@@ -31,6 +31,7 @@ public class AI : MonoBehaviour
     }
     [SerializeField] private AIState _currentState;
     [SerializeField] private int _enemyWaveIndex;
+    [SerializeField] private bool _isBurning;
 
     private NavMeshAgent _agent;
     private bool _isHiding = false;
@@ -59,7 +60,7 @@ public class AI : MonoBehaviour
     [SerializeField] private GameObject _damageTextPrefab;
     [SerializeField] private GameObject _healthBarContainer;
     [SerializeField] private Image _healthBar;
-    private float _timeBetweenKillIndications = 0.5f;
+    private float _timeBetweenKillIndications = 0.3f;
     private GameObject _killInd;
     private Camera _mainCam;
 
@@ -147,7 +148,7 @@ public class AI : MonoBehaviour
 
     void MoveForward()
     {
-        if (transform.name == "Test") { return; }
+        if (transform.name.Contains("Test")) { return; }
         _agent.SetDestination(_wayPoints[_currentWaypointIndex].transform.position);
         float distanceToCurrentWaypoint = Vector3.Distance(_wayPoints[_currentWaypointIndex].transform.position, _agent.transform.position);
         if (distanceToCurrentWaypoint < 1f && _currentWaypointIndex < _wayPoints.Count - 1)
@@ -258,6 +259,7 @@ public class AI : MonoBehaviour
         TextMesh text = Instantiate(_damageTextPrefab, transform.position, Quaternion.Euler(0, -180, 0), transform).GetComponent<TextMesh>();
         if (text != null)
         {
+            text.GetComponent<DamageText>().SetParent(transform);
             text.text = dmgAmount.ToString();
         }
     }
@@ -328,5 +330,26 @@ public class AI : MonoBehaviour
     public int GetEnemyWaveIndex()
     {
         return _enemyWaveIndex;
+    }
+
+    public bool IsBurning()
+    {
+        return _isBurning;
+    }
+
+    public void SetIsBurning(bool burn)
+    {
+        if (burn)
+        {
+            _isBurning = true;
+        }else
+        {
+            _isBurning = false;
+        }
+    }
+
+    public int GetHealth()
+    {
+        return _health;
     }
 }

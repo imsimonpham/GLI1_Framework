@@ -65,12 +65,12 @@ public class SpawnManager : MonoSingleton<SpawnManager>
             } 
         }
 
-        if(_enemiesKilledInCurrentWave >= _enemiesSpawnedInCurrentWave * 0.5f || _totalEnemiesAlive <= 2)
+        if(_enemiesKilledInCurrentWave >= _enemiesSpawnedInCurrentWave * 0.5f || _totalEnemiesAlive <= _enemiesSpawnedInCurrentWave * 0.5f)
         {
             _startNextWave = true;
         }
 
-        if(_currentWaveIndex == _waveData.Length - 1)
+        if(_currentWaveIndex == _waveData.Length - 1 && _waveData.Length > 1)
         {
             _startNextWave = false;
         }

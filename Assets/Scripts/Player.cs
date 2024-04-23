@@ -125,6 +125,10 @@ public class Player : MonoBehaviour
     public void ReduceLifePoint()
     {
         _lifePoint--;
+        if (_lifePoint < 0)
+        {
+            _lifePoint = 0;
+        }
         UIManager.Instance.UpdatePlayerLifePointText(_lifePoint);
     }
 
