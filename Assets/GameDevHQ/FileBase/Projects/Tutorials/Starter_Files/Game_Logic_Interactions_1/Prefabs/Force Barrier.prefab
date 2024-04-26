@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 3721856642347846866}
   - component: {fileID: 5763185769534635207}
   - component: {fileID: 3536736709525093728}
+  - component: {fileID: -1082544476382675204}
   - component: {fileID: 1956341747278713171}
   m_Layer: 7
   m_Name: Force Barrier
@@ -84,6 +85,25 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &-1082544476382675204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1346476309048033075}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f80984ffa3e25f43bea8dc6045ec1b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderer: {fileID: 3536736709525093728}
+  _collider: {fileID: 1956341747278713171}
+  _health: 35
+  _shatteredBarrierPrefab: {fileID: 5444423955510659581, guid: 18f9fec997c45d44aab678e03a52ea96, type: 3}
+  _upwardModifier: 1
+  _explosionRadius: 2
+  _explosionForce: 500
 --- !u!65 &1956341747278713171
 BoxCollider:
   m_ObjectHideFlags: 0

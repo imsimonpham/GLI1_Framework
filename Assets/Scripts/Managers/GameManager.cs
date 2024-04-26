@@ -69,24 +69,17 @@ public class GameManager : MonoBehaviour
     void ToggleCursor(bool show)
     {
         if(show)
-        {
             Cursor.visible = true;
-        }
         else
-        {
             Cursor.visible = false;
-        }
     } 
 
     void ToggleLockCursor(bool lockCursor)
     {
         if (lockCursor)
-        {
             Cursor.lockState = CursorLockMode.Locked;
-        }else
-        {
-            Cursor.lockState = CursorLockMode.None;
-        }   
+        else
+            Cursor.lockState = CursorLockMode.None;  
     }
 
     public void ResumeGame()
@@ -125,12 +118,8 @@ public class GameManager : MonoBehaviour
     {
         yield return new WaitForSeconds(2f);
         if(conditionText == "win")
-        {
             _playerWon = true;
-        }else
-        {
-            _playerLost = true;
-        }
-        
+        else
+            _playerLost = true;      
     }
 }

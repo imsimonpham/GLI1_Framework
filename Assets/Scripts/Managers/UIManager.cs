@@ -17,22 +17,12 @@ public class UIManager : MonoSingleton<UIManager>
     [SerializeField] TextMeshProUGUI _winText;
     [SerializeField] TextMeshProUGUI _lossText;
 
-    private float _countdownTime;
-
-    private void Start()
-    {
-        _countdownTime = 179f;
-    }
-
     private void Update()
     {
         float t = Time.timeSinceLevelLoad;
 
         if (t <= 0)
-        {
             t = 0;
-            // Optionally, do something when the countdown reaches zero.
-        }
 
         string minutes = ((int)t / 60).ToString();
         string seconds = (t % 60).ToString("f0"); // rounded to the nearest second
@@ -50,11 +40,6 @@ public class UIManager : MonoSingleton<UIManager>
         _enemiesKilledText.text = "Enemies Killed: " + amount;
     }
 
-    void UpdateTimer(float amount)
-    {
-        _timerText.text = amount.ToString();
-    }
-
     public void UpdateWeaponChargePercentageText(float amount)
     {
         _weaponChargeText.text = amount.ToString("f0") + "%";
@@ -63,12 +48,9 @@ public class UIManager : MonoSingleton<UIManager>
     public void ToggleWeaponChargeText(bool show)
     {
         if (show)
-        {
             _weaponChargeText.gameObject.SetActive(true);
-        }else
-        {
+        else
             _weaponChargeText.gameObject.SetActive(false);
-        }
     }
 
     public void UpdateWaveText(int waveIndex, int totalWaves)
@@ -79,12 +61,9 @@ public class UIManager : MonoSingleton<UIManager>
     public void ShowNextWaveText(bool show)
     {
         if (show)
-        {
             _nextWaveText.gameObject.SetActive(true);
-        }else
-        {
+        else
             _nextWaveText.gameObject.SetActive(value: false);
-        }
     }
 
     public void UpdatePlayerLifePointText(int lifepoint)
@@ -95,12 +74,9 @@ public class UIManager : MonoSingleton<UIManager>
     public void TogglePauseMenu(bool show)
     {
         if (show)
-        {
             _pauseMenu.gameObject.SetActive(true);
-        }else
-        {
+        else
             _pauseMenu.gameObject.SetActive(false);
-        }
     }
 
     public void ToggleWinLossMenu(string conditionText)

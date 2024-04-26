@@ -11,6 +11,10 @@ public class SpawnManager : MonoSingleton<SpawnManager>
     [SerializeField] private GameObject _enemyContainer;
     [SerializeField] private Transform _startPoint;
     private int _enemyPoolSize = 1;
+    private int _index;
+
+
+    private List<List<int>> _masterCoverList = new List<List<int>>();
 
     //Wave Spawner
     [SerializeField] private WaveData[] _waveData;
@@ -24,7 +28,7 @@ public class SpawnManager : MonoSingleton<SpawnManager>
     [SerializeField] private int _totalEnemiesToSpawn;
     private bool _showingNextWaveText;
     private bool _didPlayerSurvive;
-    
+
 
     private void Start()
     {
@@ -35,7 +39,7 @@ public class SpawnManager : MonoSingleton<SpawnManager>
         foreach(WaveData waveData in _waveData)
         {
             _totalEnemiesToSpawn += waveData.GetenemyCount();
-        }
+        }  
     }
 
     private void Update()
@@ -66,14 +70,10 @@ public class SpawnManager : MonoSingleton<SpawnManager>
         }
 
         if(_enemiesKilledInCurrentWave >= _enemiesSpawnedInCurrentWave * 0.5f || _totalEnemiesAlive <= _enemiesSpawnedInCurrentWave * 0.5f)
-        {
             _startNextWave = true;
-        }
 
-        if(_currentWaveIndex == _waveData.Length - 1 && _waveData.Length > 1)
-        {
+        if (_currentWaveIndex == _waveData.Length - 1 && _waveData.Length > 1)
             _startNextWave = false;
-        }
     }
 
     IEnumerator SpawnWaveRoutine()
@@ -89,11 +89,8 @@ public class SpawnManager : MonoSingleton<SpawnManager>
             yield return new WaitForSeconds(waveData.GetenemySpawnRate());
         }
         if(_currentWaveIndex < _waveData.Length - 1)
-        {
-            _nextWaveIndex = _currentWaveIndex  + 1;
-        }
+            _nextWaveIndex = _currentWaveIndex + 1;
     }
-
 
     GameObject RequestEnemySpawn()
     {
@@ -103,9 +100,15 @@ public class SpawnManager : MonoSingleton<SpawnManager>
             {
                 enemy.transform.position = _startPoint.position;
                 enemy.SetActive(true);
-                enemy.GetComponent<AI>().SetupAI();
-                enemy.GetComponent<AI>().SetEnemyWaveIndex(_currentWaveIndex);
-                _totalEnemiesSpawned++;
+                AI AI = enemy.GetComponent<AI>();
+                if(AI != null)
+                {
+                    AI.SetEnemyWaveIndex(_currentWaveIndex);
+                    _totalEnemiesSpawned++;
+                    _index++;
+                    AI.SetID(_index);
+                    AI.SetupAI();
+                }
                 return enemy;
             }
         }
@@ -120,7 +123,7 @@ public class SpawnManager : MonoSingleton<SpawnManager>
             GameObject enemyGO = Instantiate(_enemyPrefab, _startPoint.position, Quaternion.Euler(0, -90, 0));
             enemyGO.transform.parent = _enemyContainer.transform;
             enemyGO.SetActive(false);
-            _enemyPool.Add(enemyGO);    
+            _enemyPool.Add(enemyGO);
         }
         return _enemyPool;
     }
@@ -130,18 +133,22 @@ public class SpawnManager : MonoSingleton<SpawnManager>
         GameObject newEnemy = Instantiate(_enemyPrefab, _startPoint.position, Quaternion.Euler(0, -90, 0));
         newEnemy.transform.parent = _enemyContainer.transform;
         _enemyPool.Add(newEnemy);
-        newEnemy.GetComponent<AI>().SetupAI();
-        newEnemy.GetComponent<AI>().SetEnemyWaveIndex(_currentWaveIndex);
-        _totalEnemiesSpawned++;
+        AI AI = newEnemy.GetComponent<AI>();
+        if(AI != null)
+        {
+            AI.GetComponent<AI>().SetEnemyWaveIndex(_currentWaveIndex);
+            _totalEnemiesSpawned++;
+            _index++;
+            AI.GetComponent<AI>().SetID(_index);
+            AI.GetComponent<AI>().SetupAI();
+        }    
         return newEnemy;
     }
 
     public void UpdateEnemyKilledCount(AI enemy)
     {
         if (enemy.GetEnemyWaveIndex() == _currentWaveIndex)
-        {
             _enemiesKilledInCurrentWave++;
-        }
     }
 
     public void UpdateEnemiesAlive()
@@ -149,33 +156,36 @@ public class SpawnManager : MonoSingleton<SpawnManager>
         _totalEnemiesAlive--;
     }
 
-    public int GetTotalEnemiesAlive()
-    {
-        return _totalEnemiesAlive;
-    }
+    public int GetTotalEnemiesAlive() { return _totalEnemiesAlive; }
 
     public bool FinishedAllWaves()
     {
         if(_currentWaveIndex == _waveData.Length - 1)
-        {
             return true;
-        }else
-        {
+        else
             return false;
-        }
     }
 
-    public int GetTotalEnemiesSpawned()
-    {
-        return _totalEnemiesSpawned;
-    }
+    public int GetTotalEnemiesSpawned() { return _totalEnemiesSpawned; }
 
     public bool DidPlayerSurvive()
     {
         if(_totalEnemiesToSpawn == _totalEnemiesSpawned && _totalEnemiesAlive == 0)
-        {
             _didPlayerSurvive = true;
-        }
+
         return _didPlayerSurvive;
+    }
+
+    public List<List<int>> GetMasterCoverList() { return _masterCoverList; }
+
+    public void SetMasterCoverList()
+    {
+        _masterCoverList.Clear();
+        _masterCoverList.Add(new List<int> { 1, 9, 14 });
+        _masterCoverList.Add(new List<int> { 5, 10, 15 });
+        _masterCoverList.Add(new List<int> { 2, 11, 14 });
+        _masterCoverList.Add(new List<int> { 4, 7, 12 });
+        _masterCoverList.Add(new List<int> { 0, 8, 11 });
+        _masterCoverList.Add(new List<int> { 3, 6, 13 });
     }
 }

@@ -10,6 +10,7 @@ TagManager:
   - Head
   - AI
   - Kill Indicator
+  - Damage Text
   layers:
   - Default
   - TransparentFX
@@ -21,8 +22,8 @@ TagManager:
   - Barrier
   - Weapon
   - Explosives
-  - 
-  - 
+  - Hitbox
+  - Cover
   - 
   - 
   - 

@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class Utilities
 {
-    public static void SelectThreeRandomIntegers(List<int> list, int min, int max)
+   /* public static void SelectThreeRandomIntegers(List<int> list, int min, int max)
     {
         if (max - min + 1 < 3)
         {
@@ -19,22 +19,27 @@ public static class Utilities
         {
             newIndex = Random.Range(min, max);
             if (!list.Contains(newIndex))
-            {
                 list.Add(newIndex);
-            }
+
             attempts++;
         }
 
         if (attempts >= maxAttempts)
-        {
             Debug.LogError("Maximum attempts reached without finding 3 unique integers.");
-        }
     }
-
+*/
     public static List<int> GetRandomCoverList(List<List<int>> list)
     {
         int randomIndex = Random.Range(0, list.Count);
-
         return list[randomIndex];
     }
+
+   /* public static string PrintOutStringFromList<T>(string combinedText, List<T> objects)
+    {
+        for (int i = 0; i < objects.Count; i++)
+        {
+            combinedText = combinedText + " " + objects[i].ToString();
+        }  
+        return combinedText;
+    }*/
 }

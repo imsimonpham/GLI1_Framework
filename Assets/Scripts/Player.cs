@@ -77,11 +77,6 @@ public class Player : MonoBehaviour
             _weapon.StopWeaponCharge();
             _isCharging = false;
         }
-
-        /*if(Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            _scopedOutCursor.SetActive(!_scopedOutCursor.activeSelf);
-        }*/
     }
 
     public void GainScore(int amount)
@@ -126,25 +121,18 @@ public class Player : MonoBehaviour
     {
         _lifePoint--;
         if (_lifePoint < 0)
-        {
             _lifePoint = 0;
-        }
+
         UIManager.Instance.UpdatePlayerLifePointText(_lifePoint);
     }
 
-    public int GetLifePoint()
-    {
-        return _lifePoint;
-    }
+    public int GetLifePoint() { return _lifePoint; }
 
     public void TogglePlayerEnablement(bool enable)
     {
         if(enable)
-        {
             _enabled = true;
-        }else
-        {
+        else
             _enabled = false;
-        }
     }
 }

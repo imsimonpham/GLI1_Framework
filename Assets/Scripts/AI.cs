@@ -7,21 +7,23 @@ using UnityEngine.UI;
 public class AI : MonoBehaviour
 {
     //AI States
-    private List<GameObject> _wayPoints = new List<GameObject>();
-    private int _currentWaypointIndex;
+    [SerializeField] private List<GameObject> _wayPoints = new List<GameObject>();
+    [SerializeField] private int _currentWaypointIndex;
     private GameObject _endPoint;
-    private GameObject[] _totalCovers;
-    private List<int> _coverIndexes = new List<int>();
-    private List<List<int>> _coverMasterList = new List<List<int>>();
+    [SerializeField] private List<GameObject> _totalCovers = new List<GameObject>();
+    [SerializeField] private List<int> _coverIndexes = new List<int>();
+    
     float _distanceToEndPoint;
     private bool _executedFinishedAITasks;
 
     [Header("Animation")]
     [SerializeField] private Animator _anim;
-    [SerializeField] private int _floor;
 
     [Header("AI ")]
     [SerializeField] private int _health;
+    [SerializeField] private int _fullHealth;
+    [SerializeField] private bool _immune;
+
     private enum AIState
     {
         Idle,
@@ -31,14 +33,13 @@ public class AI : MonoBehaviour
     }
     [SerializeField] private AIState _currentState;
     [SerializeField] private int _enemyWaveIndex;
-    [SerializeField] private bool _isBurning;
+    [SerializeField] private bool _isBurning = false;
+    [SerializeField] private int _ID;
 
     private NavMeshAgent _agent;
     private bool _isHiding = false;
     private bool _isDead = false;
-
     private int _score = 50;
-    private int _fullHealth = 200;
 
     //Player
     private Player _player;
@@ -67,32 +68,21 @@ public class AI : MonoBehaviour
     private void Awake()
     {
         _endPoint = GameObject.FindGameObjectWithTag("End Point");
-        _coverMasterList.Add(new List<int> { 1, 9, 14 });
-        _coverMasterList.Add(new List<int> { 5, 10, 15 });
-        _coverMasterList.Add(new List<int> { 2, 11, 14 });
-        _coverMasterList.Add(new List<int> { 4, 7, 12 });
-        _coverMasterList.Add(new List<int> { 0, 8, 11 });
-        _coverMasterList.Add(new List<int> { 3, 6, 13 });
     }
 
     private void Start()
     {
         _agent = GetComponent<NavMeshAgent>();
         if (_agent == null)
-        {
             Debug.LogError("Nav Mesh Agent is null");
-        }
 
         _player = GameObject.FindGameObjectWithTag("Player").GetComponent<Player>();
         if (_player == null)
-        {
             Debug.LogError("Player is null");
-        }
+
         _killInd = GameObject.FindGameObjectWithTag("Kill Indicator");
         if (_killInd == null)
-        {
             Debug.LogError("Kill Indicator is null");
-        }
 
         _mainCam = Camera.main;
         _currentState = AIState.Run;
@@ -101,10 +91,14 @@ public class AI : MonoBehaviour
 
     private void Update()
     {
-        if (_health <= 0)
+        if(_immune)
         {
-            _currentState = AIState.Die;
+            _health = _fullHealth;
+            UpdateHealthBar();
         }
+
+        if (_health <= 0 && !_immune)
+            _currentState = AIState.Die;
 
         _distanceToEndPoint = Vector3.Distance(_endPoint.transform.position, transform.position);
 
@@ -136,9 +130,7 @@ public class AI : MonoBehaviour
                 break;
             case AIState.Die:
                 if (!_isDead)
-                {
                     Die();
-                }
                 break;
         }
 
@@ -148,7 +140,7 @@ public class AI : MonoBehaviour
 
     void MoveForward()
     {
-        if (transform.name.Contains("Test")) { return; }
+        /*if (transform.name.Contains("Test")) { return; }*/
         _agent.SetDestination(_wayPoints[_currentWaypointIndex].transform.position);
         float distanceToCurrentWaypoint = Vector3.Distance(_wayPoints[_currentWaypointIndex].transform.position, _agent.transform.position);
         if (distanceToCurrentWaypoint < 1f && _currentWaypointIndex < _wayPoints.Count - 1)
@@ -160,17 +152,35 @@ public class AI : MonoBehaviour
 
     void GenerateWaypointList()
     {
+        //Clear all lists
+        _coverIndexes.Clear();
+        _wayPoints.Clear();
+        _totalCovers.Clear();
+
         //get all the covers
-        _totalCovers = GameObject.FindGameObjectsWithTag("Cover");
+        GameObject[] coverArray = GameObject.FindGameObjectsWithTag("Cover");
+        _totalCovers.AddRange(coverArray);
+
+        // Sort the _totalCovers list in ascending order based on names
+        _totalCovers.Sort((x, y) =>
+        {
+            int numberX, numberY;
+            if (int.TryParse(x.name, out numberX) && int.TryParse(y.name, out numberY))
+                return numberX.CompareTo(numberY);
+
+            // If parsing fails, compare as strings
+            return string.Compare(x.name, y.name);
+        });
+
         //select a random cover list
-        _coverIndexes = Utilities.GetRandomCoverList(_coverMasterList);
+        SpawnManager.Instance.SetMasterCoverList();
+        _coverIndexes = Utilities.GetRandomCoverList(SpawnManager.Instance.GetMasterCoverList());
+
         //add covers to waypoint list if their indexes were selected
-        for (var i = 0; i < _totalCovers.Length; i++)
+        for (var i = 0; i < _totalCovers.Count; i++)
         {
             if (_coverIndexes.Contains(i))
-            {
                 _wayPoints.Add(_totalCovers[i]);
-            }
         }
         _wayPoints.Add(_endPoint);
     }
@@ -205,8 +215,6 @@ public class AI : MonoBehaviour
         SpawnManager.Instance.UpdateEnemiesAlive();
         _agent.isStopped = true;
         _anim.SetBool("isDead", true);
-        _coverIndexes.Clear();
-        _wayPoints.Clear();
         _player.GainScore(_score);
         _player.IncreaseEnemiesKilled();
         _isDead = true;
@@ -224,6 +232,7 @@ public class AI : MonoBehaviour
 
     void ReuseDeadAI()
     {
+        _isBurning = false;
         _isDead = false;
         _health = _fullHealth;
         UpdateHealthBar();
@@ -234,28 +243,26 @@ public class AI : MonoBehaviour
 
     void ReuseFinishedAI()
     {
+        _isBurning = false;
         _health = _fullHealth;
         UpdateHealthBar();
-        _coverIndexes.Clear();
-        _wayPoints.Clear();
         _currentState = AIState.Idle;
         gameObject.SetActive(false);
     }
 
     public void TakeDamage(int dmgAmount)
     {
+        if (_immune) { return; }
         _health -= dmgAmount;
         UpdateHealthBar();
         ShowDamageText(dmgAmount);
         if (_health <= 0)
-        {
-            _currentState = AIState.Die;
             StartCoroutine(KillIndicatingRoutine());
-        }
     }
 
     void ShowDamageText(int dmgAmount)
     {
+        if(_immune) { return; }
         TextMesh text = Instantiate(_damageTextPrefab, transform.position, Quaternion.Euler(0, -180, 0), transform).GetComponent<TextMesh>();
         if (text != null)
         {
@@ -288,9 +295,8 @@ public class AI : MonoBehaviour
     void PlayDeathSound()
     {
         if(_killType == KillType.Scope)
-        {
             _audioSource.PlayOneShot(_scopeKill);
-        } else
+        else
         {
             _audioSource.PlayOneShot(_unscopeKill, 1f);
             _audioSource.pitch = 1f;
@@ -300,16 +306,11 @@ public class AI : MonoBehaviour
     public void AdjustDeathSound(float currentChargePercentage)
     {
         if(currentChargePercentage < 50f)
-        {
             _audioSource.volume = 0.3f;
-        }else if (currentChargePercentage < 80f)
-        {
+        else if (currentChargePercentage < 80f)
             _audioSource.volume = 0.5f;
-        }
         else
-        {
             _audioSource.volume = 1f;
-        }
     }
 
     private void AdjustAgentRadius(float radius)
@@ -327,29 +328,38 @@ public class AI : MonoBehaviour
         _enemyWaveIndex = index;
     }
 
-    public int GetEnemyWaveIndex()
-    {
-        return _enemyWaveIndex;
-    }
+    public int GetEnemyWaveIndex() { return _enemyWaveIndex; }
 
-    public bool IsBurning()
-    {
-        return _isBurning;
-    }
+    public bool IsBurning() { return _isBurning; }
 
     public void SetIsBurning(bool burn)
     {
         if (burn)
-        {
             _isBurning = true;
-        }else
-        {
+        else
             _isBurning = false;
-        }
     }
 
-    public int GetHealth()
+    public int GetHealth() { return _health; }
+
+    public int GetID() { return _ID; }
+
+    public void SetID(int ID) { _ID = ID; }
+
+    public void StayImmune(bool immune)
     {
-        return _health;
+        if(immune)
+            _immune = true;
+        else
+            _immune = false;
+    }
+
+    public void DestroyDamageText()
+    {
+        GameObject[] damageTextObjects = GameObject.FindGameObjectsWithTag("Damage Text");
+        foreach (GameObject obj in damageTextObjects)
+        {
+            Destroy(obj);
+        }
     }
 }

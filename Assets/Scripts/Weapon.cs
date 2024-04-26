@@ -5,12 +5,10 @@ public class Weapon : MonoBehaviour
 {
     [Header("Weapon Stats")]
     [SerializeField] LayerMask _layerMask;
-    private string _layerNameToCheck = "AI";
     [SerializeField] int _unscopedDamage = 35;
     [SerializeField] int _fullyScopedDamage = 100;
     [SerializeField] private float _fireRate;
     private float _nextFireTime;
-    private int _shotsFired;
     private float _fullChargePercentage = 100f;
     private float _chargeDuration = 1f;
     private float _startChargePercentage = 0f;
@@ -19,9 +17,11 @@ public class Weapon : MonoBehaviour
     private bool _isCurrentlyScoping;
     private int _damageDealt;
     private bool _canCharge = true;
-    private int _AILayerMaskIndex = 6;
+    private int _AIHitboxLayerMaskIndex = 10;
+    private int _coverLayerMaskIndex = 11;
     private int _barrierLayerMaskIndex = 7;
     private int _barrelLayerMaskIndex = 9;
+    private int _headShotMultiplier = 2;
 
     [Header("UI")]
     [SerializeField] private GameObject _headShotInd;
@@ -50,21 +50,16 @@ public class Weapon : MonoBehaviour
     {
         _camRecoil = GameObject.FindAnyObjectByType<CameraRecoil>().GetComponent<CameraRecoil>();
         if(_camRecoil == null )
-        {
             Debug.Log("Camera Recoil is null");
-        }
     }
 
     void Update()
     {
         if (_isCurrentlyScoping)
-        {     
             _fireRate = 1f;
-
-        }else
-        {
+        else
             _fireRate = 0.2f;
-        }
+
         UIManager.Instance.UpdateWeaponChargePercentageText(_currentChargePercentage);
     }
 
@@ -74,6 +69,7 @@ public class Weapon : MonoBehaviour
         {           
             Ray rayOrigin = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             RaycastHit hitInfo;
+
 
             if (!_isCurrentlyScoping)
             {
@@ -87,78 +83,85 @@ public class Weapon : MonoBehaviour
                 PlayScopedShotSound();
             }
 
-            if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << _AILayerMaskIndex))
-            {
-                //if layer mask == AI
-                Hitbox hitbox = hitInfo.collider.GetComponent<Hitbox>();
-                if (hitbox != null)
-                {
-                        
-                    int damage;
-                    Hitbox.CollisionType type = hitbox.GetDamageType();
-                    switch (type)
-                    {
-                        case Hitbox.CollisionType.Head:
-                            if (!_shownHeadShotInd)
-                            {
-                                StartCoroutine(HitIndicatingRoutine(_headShotInd));
-                                _shownHeadShotInd = true;
-                            }
-                            damage = CalculateHitDamage() * 2;
-                            hitbox.Hit(damage);
-                            _shownHeadShotInd = false;
-                            break;
-                        case Hitbox.CollisionType.Body:
-                            if (!_shownBodyShotInd)
-                            {
-                                StartCoroutine(HitIndicatingRoutine(_bodyShotInd));
-                                _shownBodyShotInd = false;
-                            }
-                            damage = CalculateHitDamage();
-                            hitbox.Hit(damage);
-                            _shownBodyShotInd = false;
-                            break;
-                    }
 
-                    AI enemy = hitbox.GetAIComponent();
-                    if (enemy == null)
+            if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << _AIHitboxLayerMaskIndex | 1 << _barrierLayerMaskIndex | 1 << _barrelLayerMaskIndex | 1 << _coverLayerMaskIndex))
+            {
+                if(hitInfo.collider.gameObject.layer == _AIHitboxLayerMaskIndex)
+                {
+                    Hitbox hitbox = hitInfo.collider.GetComponent<Hitbox>();
+                    if (hitbox != null)
                     {
-                        Debug.LogError("AI Component is null");
-                        return;
-                    }
-                    if (!_isCurrentlyScoping)
-                    {
-                        enemy.SetKillType(AI.KillType.Unscope);
+
+                        int damage;
+                        Hitbox.CollisionType type = hitbox.GetDamageType();
+                        switch (type)
+                        {
+                            case Hitbox.CollisionType.Head:
+                                if (!_shownHeadShotInd)
+                                {
+                                    StartCoroutine(HitIndicatingRoutine(_headShotInd));
+                                    _shownHeadShotInd = true;
+                                }
+                                damage = CalculateHitDamage() * _headShotMultiplier;
+                                hitbox.Hit(damage);
+                                _shownHeadShotInd = false;
+                                break;
+                            case Hitbox.CollisionType.Body:
+                                if (!_shownBodyShotInd)
+                                {
+                                    StartCoroutine(HitIndicatingRoutine(_bodyShotInd));
+                                    _shownBodyShotInd = false;
+                                }
+                                damage = CalculateHitDamage();
+                                hitbox.Hit(damage);
+                                _shownBodyShotInd = false;
+                                break;
+                        }
+
+                        AI enemy = hitbox.GetAIComponent();
+                        if (enemy == null)
+                        {
+                            Debug.LogError("AI Component is null");
+                            return;
+                        }
+                        if (!_isCurrentlyScoping)
+                            enemy.SetKillType(AI.KillType.Unscope);
+                        else
+                        {
+                            enemy.SetKillType(AI.KillType.Scope);
+                            enemy.AdjustDeathSound(_currentChargePercentage);
+                        }
                     }
                     else
+                        Debug.LogError("Hit box is null");
+                } 
+                else if (hitInfo.collider.gameObject.layer == _barrierLayerMaskIndex)
+                {
+                    //if layer mask == Barrier
+                    _audioSource.PlayOneShot(_bulletHitBarrierSound, 1f);
+                    Barrier barrier = hitInfo.collider.GetComponent<Barrier>();
+                    if (barrier != null)
                     {
-                        enemy.SetKillType(AI.KillType.Scope);
-                        enemy.AdjustDeathSound(_currentChargePercentage);
+                        barrier.TakeDamage(CalculateHitDamage());
                     }
                 }
-                else 
+                else if (hitInfo.collider.gameObject.layer == _barrelLayerMaskIndex)
                 {
-                    Debug.LogError("Hit box is null");
+                    Explosion explostion = Instantiate(_explosionPrefab, hitInfo.collider.transform.position, Quaternion.identity).GetComponent<Explosion>();
+                    if (explostion != null)
+                        explostion.ExplosionDamage();
+                    else
+                        Debug.Log("explosion is null");
+
+                    Destroy(hitInfo.collider.gameObject, 0.5f);
+                } 
+                else if (hitInfo.collider.gameObject.layer == _coverLayerMaskIndex)
+                {
+                    return;
                 }
-
             }
-            else if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << _barrierLayerMaskIndex))
-            {
-                //if layer mask == Barrier
-                _audioSource.PlayOneShot(_bulletHitBarrierSound, 1f);
-
-            } else if (Physics.Raycast(rayOrigin, out hitInfo, Mathf.Infinity, 1 << _barrelLayerMaskIndex))
-            {
-                // if layer mask == Barrels
-               Explosion explostion =  Instantiate(_explosionPrefab, hitInfo.collider.transform.position, Quaternion.identity).GetComponent<Explosion>();
-               if(explostion != null)
-               {
-                    explostion.ExplostionDamage();
-               }
-               Destroy(hitInfo.collider.gameObject, 0.5f); 
-            }
-            _nextFireTime = Time.time + _fireRate;
         }
+        _nextFireTime = Time.time + _fireRate;
     }
 
     IEnumerator HitIndicatingRoutine(GameObject indicator)
@@ -185,10 +188,9 @@ public class Weapon : MonoBehaviour
             {
                 float progress = timer / _chargeDuration;
                 _currentChargePercentage = Mathf.Lerp(_startChargePercentage, _fullChargePercentage, progress); // Start from 0%
-                if (_currentChargePercentage >= 98.5f) // Check if charge is close to 100%
-                {
+                if (_currentChargePercentage >= 98f) // Check if charge is close to 100%
                     _currentChargePercentage = _fullChargePercentage; // Round up to 100% if close
-                }
+
                 timer += Time.deltaTime;
             }         
             yield return null;
@@ -207,13 +209,9 @@ public class Weapon : MonoBehaviour
     int CalculateHitDamage()
     {
         if (_isCurrentlyScoping)
-        {
             _damageDealt = Mathf.RoundToInt(_fullyScopedDamage * _currentChargePercentage / 100f);
-        }
         else
-        {
             _damageDealt = _unscopedDamage;
-        }
 
         return _damageDealt;
     }
