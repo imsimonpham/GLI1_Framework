@@ -44,7 +44,6 @@ public class Explosion : MonoBehaviour
             }
             else
                 Debug.LogError("enemy is null");
-
         }
 
         foreach (AI enemy in _burningEnemies)

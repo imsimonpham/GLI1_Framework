@@ -66,7 +66,8 @@ public class Weapon : MonoBehaviour
     public void Fire()
     {
         if (Time.time > _nextFireTime)
-        {           
+        {
+            _nextFireTime = Time.time + _fireRate;
             Ray rayOrigin = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             RaycastHit hitInfo;
 
@@ -160,8 +161,9 @@ public class Weapon : MonoBehaviour
                     return;
                 }
             }
+            
+
         }
-        _nextFireTime = Time.time + _fireRate;
     }
 
     IEnumerator HitIndicatingRoutine(GameObject indicator)
